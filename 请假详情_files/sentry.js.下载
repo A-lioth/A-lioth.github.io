@@ -1,0 +1,345 @@
+;
+(function(window, doc) {
+    $(doc).ready(function() {
+        window.APP_CONFIG = {};
+        if (!window.APP_CONFIG || (window.APP_CONFIG && window.APP_CONFIG['ISSENTRY'] !== false)) {
+            var DEFAULT_MOD = 'index';
+            var userAgentInfo = navigator.userAgent.toLowerCase();
+            var Agents = ["android", "iphone",
+                "symbianos", "windows phone",
+                "ipad", "ipod"
+            ];
+            var isPhone = Agents.some(function(v) {
+                return userAgentInfo.indexOf(v) > -1;
+            });
+            var storageKey = 'SENTRY_USAGE_INFO';
+            var usageTrack = {};
+            var isModEqual = function(log, hashArray) {
+                if (isPhone) {
+                    return true;
+                }
+                //无permission.xml的情况下，mod默认为index，此时不做路由判断
+                if (log.mod === DEFAULT_MOD) {
+                    return true;
+                }
+
+                if (hashArray && log.mod) {
+                    hashArray = hashArray.slice(0);
+                    hashArray.shift();
+
+                    //配置的路由存在aaa/bbb和aaa，先做完全匹配，过滤掉页面路由aaa与配置aaa/bbb的匹配情况
+                    var hash = hashArray.join('/');
+                    var isModeCatch = log.mod === hash;
+                    if (isModeCatch) {
+                        return true;
+                    }
+
+                    //判断路由为aaa/1，log.mod为aaa
+                    var isEqual = true;
+                    $(log.mod.split('/')).each(function(i, mod) {
+                        if (mod !== hashArray[i]) {
+                            isEqual = false;
+                            return false;
+                        }
+                    });
+                    return isEqual;
+                }
+                return hashArray === log.mod;
+            };
+
+            //绑定浏览器原生事件追踪方法
+            var nativeEventBind = function(logs, event) {
+                if (doc.addEventListener) {
+                    var self = this;
+                    doc.addEventListener(event, function(e) {
+                        var appMod = location.hash && location.hash.split('/');
+                        var $target = $(e.target);
+                        $.each(logs, function(i, log) {
+                            if (isModEqual(log, appMod)) {
+                                if (self.isMatch($target, log.selector)) {
+                                    usageTrack.collectUsage(log, self.getParams(), log);
+                                    return false;
+                                }
+                            }
+                        });
+                    }, true);
+                }
+            };
+
+            //绑定组件事件追踪方法
+            var componentEventBind = function(logs, event) {
+                var self = this;
+                $.each(logs, function(i, log) {
+                    $(doc).on(event, log.selector, function() {
+                        var argus = arguments;
+                        var appMod = location.hash && location.hash.split('/');
+                        if (isModEqual(log, appMod)) {
+                            var params = self.getParams.apply(self, argus);
+                            usageTrack.collectUsage(log, params);
+                        }
+                    });
+                });
+            };
+
+            //类型处理库
+            var typeHandle = {
+                'click': {
+                    isMatch: function($ele, selector) {
+                        //防止非法选择器导致报错
+                        try {
+                            return $ele.is(selector) || $ele.closest($(selector)).length;
+                        } catch (e) {
+                            return false;
+                        }
+                    },
+                    bindTrack: function(logs) {
+                        nativeEventBind.call(this, logs, 'click');
+                    },
+                    getParams: function() {
+                        return '';
+                    }
+                },
+                'grid': {
+                    isMatch: function() {},
+                    bindTrack: function(logs) {
+                        componentEventBind.call(this, logs, 'search');
+                    },
+                    getParams: function(e, data) {
+                        try {
+                            return JSON.parse(data);
+                        } catch (e) {
+                            return {};
+                        }
+                    }
+                },
+                'custCol': {
+                    isMatch: function() {},
+                    bindTrack: function(logs) {
+                        componentEventBind.call(this, logs, 'custom.grid');
+                    },
+                    getParams: function(e, grid) {
+                        return grid;
+                    }
+                },
+                'mod': {
+                    isMatch: function() {},
+                    bindTrack: function(logs) {
+                        var self = this;
+                        if (isPhone && logs.length) {
+                            usageTrack.collectUsage(logs[0], self.getParams(logs[0]));
+                        } else {
+                            var changeHandle = function() {
+                                if (!location.hash) {
+                                    return;
+                                }
+                                var appMod = location.hash.split('/');
+                                $.each(logs, function(i, log) {
+                                    if (isModEqual(log, appMod)) {
+                                        usageTrack.collectUsage(log, self.getParams(log));
+                                        return false;
+                                    }
+                                });
+                            };
+                            $(window).on('hashchange', changeHandle);
+                        }
+                    },
+                    getParams: function(log) {
+                        var params = '';
+                        //如果无permission.xml，匹配APP_CONFIG.MODULES，尝试返回路由信息
+                        if (window.APP_CONFIG.MODULES && log.mod === DEFAULT_MOD) {
+                            var appMod = location.hash;
+                            $(window.APP_CONFIG.MODULES).each(function() {
+                                if (appMod.indexOf(this.route) > -1) {
+                                    params = JSON.stringify(this);
+                                    return false;
+                                }
+                            });
+                        }
+                        return params;
+                    }
+                }
+            };
+
+            //收集收集发送对象
+            var usageSentry = function(config, appLogs) {
+                this.interval = config.interval;
+                this.sendUrl = config.sendUrl;
+                this.emitNum = config.emitNum;
+                this.disable = config.disable;
+                this.appLogs = appLogs;
+                this.sendUsageInfo();
+                this.sendTimeout();
+            };
+
+            usageSentry.prototype.collectUsage = function(log, params) {
+                if (this.disable) {
+                    return;
+                }
+
+                var key = storageKey + '_' + this.sendUrl;
+                var storage = localStorage.getItem(key);
+                var appLog = {
+                    id: log.id,
+                    device: isPhone ? 'phone' : 'pc',
+                    eventTime: this.formatDate(new Date(), 'yyyy-MM-dd hh:mm:ss'),
+                    params: params || ''
+                };
+                if (storage) {
+                    localStorage.setItem(key, (storage + ',' + JSON.stringify(appLog)));
+                    localStorage.setItem(key + '_COUNT', (localStorage.getItem(key + '_COUNT') * 1 + 1));
+                } else {
+                    localStorage.setItem(key, JSON.stringify(appLog));
+                    localStorage.setItem(key + '_COUNT', '1');
+                }
+                if (localStorage.getItem(key + '_COUNT') * 1 >= this.emitNum) {
+                    this.sendUsageInfo();
+                }
+            };
+
+            //收集自定义参数
+            usageSentry.prototype.collectCustomLog = function(selector, params) {
+                var self = this;
+                var appMod = location.hash && location.hash.split('/');
+                var logs = this.appLogs;
+                $(logs).each(function() {
+                    if (isModEqual(this, appMod) && $.trim(this.selector) === $.trim(selector)) {
+                        self.collectUsage(this, params);
+                        return false;
+                    }
+                });
+            };
+
+            usageSentry.prototype.sendTimeout = function() {
+                clearTimeout(this.sendTimer);
+                this.sendTimer = setTimeout(this.sendUsageInfo.bind(this), this.interval);
+            };
+
+            usageSentry.prototype.sendUsageInfo = function() {
+                var key = storageKey + '_' + this.sendUrl;
+                var storage = localStorage.getItem(key);
+                if (storage) {
+                    localStorage.removeItem(key);
+                    localStorage.removeItem(key + '_COUNT');
+                    var data = '[' + storage + ']';
+                    $.ajax({
+                        type: 'POST',
+                        url: this.sendUrl,
+                        data: { d: data }
+                    });
+                }
+                this.sendTimeout();
+            };
+
+            usageSentry.prototype.formatDate = function(date, format) {
+                var o = {
+                    'M+': date.getMonth() + 1,
+                    'd+': date.getDate(),
+                    'h+': date.getHours(),
+                    'm+': date.getMinutes(),
+                    's+': date.getSeconds(),
+                    'q+': Math.floor((date.getMonth() + 3) / 3),
+                    'S': date.getMilliseconds()
+                };
+                if (/(y+)/.test(format)) {
+                    format = format.replace(RegExp.$1, (date.getFullYear() + '').substr(4 - RegExp.$1.length));
+                }
+                for (var k in o) {
+                    if (new RegExp('(' + k + ')').test(format)) {
+                        format = format.replace(RegExp.$1, (RegExp.$1.length === 1) ? (o[k]) : (('00' + o[k]).substr(('' + o[k]).length)));
+                    }
+                }
+                return format;
+            };
+
+            usageSentry.prototype.enableSentry = function() {
+                this.disable = false;
+                this.sendTimeout();
+            };
+
+            usageSentry.prototype.disableSentry = function() {
+                this.disable = true;
+                window.clearTimeout(this.sendTimer);
+            };
+
+            //pathname: /axsfw/sys/leaveSchool/*default/index.do
+            var pathname = location.pathname.split('/');
+            var appname = pathname[pathname.indexOf('sys') + 1];
+            if (appname) {
+                var context = '';
+                for (var i = 1; i < pathname.indexOf('sys'); i++) {
+                    context += '/' + pathname[i];
+                }
+                var uri = context + '/sys/emappagelog/config/' + appname + '.do';
+                if (window.APP_CONFIG && window.APP_CONFIG.SENTRY_CONFIG_URI) {
+                    uri = window.APP_CONFIG.SENTRY_CONFIG_URI;
+                }
+
+                // var appLogs = [{
+                //     id: '1',
+                //     type: 'custCol',
+                //     mod: 'xsxxdbwh',
+                //     selector: 'section'
+                // }, {
+                //     id: '2',
+                //     type: 'grid',
+                //     mod: 'xsxxdbwh',
+                //     selector: '123'
+                // }, {
+                //     id: '3',
+                //     type: 'mod',
+                //     mod: 'xsxxdbwh'
+                // }, {
+                //     id: '4',
+                //     type: 'click',
+                //     mod: 'xsxxdbwh',
+                //     selector: '[data-action="add"]'
+                // }];
+
+                $.get(uri, function(appLogs) {
+                    if ($.isArray(appLogs)) {
+                        if (appLogs.length === 0) {
+                            return;
+                        }
+                        var initSentry = function() {
+                            var config = {
+                                interval: (window.APP_CONFIG && window.APP_CONFIG['SENTRYINTERVAL']) || 20000,
+                                sendUrl: context + '/sys/emappagelog/push.do',
+                                emitNum: (window.APP_CONFIG && window.APP_CONFIG['SENTRYEMITNUM']) || 15,
+                                disable: false
+                            };
+
+                            usageTrack = new usageSentry(config, appLogs);
+                            window.ST = usageTrack;
+
+                            var Adapter = function(appLogs) {
+                                var groupArray = function(array, type) {
+                                    var group = {};
+                                    array.forEach(function(item) {
+                                        if (item && item[type]) {
+                                            var key = item[type];
+                                            if (!group[key]) {
+                                                group[key] = [];
+                                            }
+                                            group[key].push(item);
+                                        }
+                                    });
+                                    return group;
+                                };
+                                var group = groupArray(appLogs, 'type');
+                                for (var type in group) {
+                                    var handle = typeHandle[type];
+                                    if (handle) {
+                                        handle.bindTrack(group[type]);
+                                    }
+                                }
+                            };
+                            Adapter(appLogs);
+                        };
+
+                        initSentry();
+                    }
+                });
+            }
+        }
+    });
+})(window, document);

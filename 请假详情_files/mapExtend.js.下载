@@ -1,0 +1,16 @@
+define(function (require, exports, module) {
+    var result = {
+        isUsed:false,//定制时，修改为true
+        /**
+         * 1、二开获取当前位置
+         */
+         getExtendLocation: function () {
+            var dfd = $.Deferred();
+            window.curlng = 0;
+            window.curlat = 0;
+            dfd.resolve();
+            return dfd.promise();
+        }
+    };
+    return result;
+});

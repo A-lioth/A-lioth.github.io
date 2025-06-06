@@ -1,0 +1,265 @@
+window.MOB_ROUTE_CONFIG = [{
+    path: "/xsqjsh",
+    name: "xsqjsh",
+    component: "newmob/xsqjsh/xsqjsh",
+    redirect: "/xsqjsh/grqjsh",
+    meta: {
+        id: "xsqjsh",
+        GNBS: "Tea_audit",
+        isIndex: true,
+        indexName: "请假审核",
+        indexIconType: "iconPark",
+        indexIcon: "audit",
+        keepAlive: true
+       
+    }, 
+    children:[{
+		path : 'grqjsh',
+		name : 'grqjsh',
+		component : 'newmob/xsqjsh/grqjsh/grqjsh',
+		meta : {
+			id : "grqjsh",
+			GNBS : "Tea_audit",
+			indexName : "个人请假审核",
+			keepAlive : true
+		}
+	},{
+		path : 'jtqjsh',
+		name : 'jtqjsh',
+		component : 'newmob/xsqjsh/jtqjsh/jtqjsh',
+		meta : {
+			id : "jtqjsh",
+			GNBS : "swmxsqjapp-jtqj",
+			indexName : "集体请假审核",
+			keepAlive : true
+		}
+	}]
+},
+{
+    path: "/add",
+    name: "add",
+    component: "newmob/xsqjsh/grqjsh/add/add",
+    meta: {
+        id: "add",
+        GNBS: "Tea_audit",
+        indexName: "新增"
+    }
+},
+{
+	path: "/xsqjshxq",
+	name: "xsqjshxq",
+	component: "newmob/xsqjsh/grqjsh/detail/xsqjshxq",
+	meta: {
+		id: "xsqjshxq",
+		GNBS: "Tea_audit",
+		indexName: "审核详情",
+		keepAlive : true
+	}
+},
+{
+	path: "/xsqjxqshlc",
+	name: "xsqjxqshlc",
+	component: "newmob/xsqjsh/grqjsh/detail/xsqjxqshlc",
+	meta: {
+		id: "xsqjxqshlc",
+		GNBS: "Tea_audit",
+		indexName: "审核进度"
+	}
+},
+{
+    path: "/xjdetail",
+    name: "xjdetail",
+    component: "newmob/components/xjdetail/xjdetail",
+    meta: {
+        id: "xjdetail",
+        GNBS: ["Stu_apply","Tea_audit"],
+        indexName: "续假详情",
+        keepAlive: true
+    }
+},
+{
+    path: "/addJtqj",
+    name: "addJtqj",
+    component: "newmob/xsqjsh/jtqjsh/xz/add",
+    meta: {
+        id: "addJtqj",
+        GNBS: "swmxsqjapp-jtqj",
+        indexName: "新增"
+    }
+},
+{
+	path: "/xqJtqj",
+	name: "xqJtqj",
+	component: "newmob/xsqjsh/jtqjsh/xq/xq",
+	meta: {
+		id: "xqJtqj",
+		GNBS: "swmxsqjapp-jtqj",
+		indexName: "详情"
+	}
+},
+{
+	path: "/shxx",
+	name: "shxx",
+	component: "newmob/xsqjsh/jtqjsh/shxx/shxx",
+	meta: {
+		id: "shxx",
+		GNBS: "swmxsqjapp-jtqj",
+		indexName: "审核信息"
+	}
+},
+{
+    path: "/qjsq",
+    name: "qjsq",
+    component: "newmob/qjsq/qjsq",
+    meta: {
+        id: "qjsq",
+        GNBS: "Stu_apply",
+        isIndex: true,
+        indexName: "学生请假申请"
+    }
+},
+{
+    path: "/qjcn",
+    name: "qjcn",
+    component: "newmob/qjsq/add/qjcn",
+    meta: {
+        id: "qjcl",
+        GNBS: "Stu_apply",
+        indexName: "请假承诺"
+    }
+},
+{
+    path: "/xzqjsq",
+    name: "xzqjsq",
+    component: "newmob/qjsq/add/xzqjsq",
+    meta: {
+        id: "xzqjsq",
+        GNBS: "Stu_apply",
+        indexName: "学生请假申请新增"
+    }
+},
+{
+    path: "/success",
+    name: "success",
+    component: "newmob/qjsq/add/success",
+    meta: {
+        id: "success",
+        GNBS: "Stu_apply",
+        indexName: "请假申请成功"
+    }
+},
+
+{
+    path: "/xsqjsqxq",
+    name: "xsqjsqxq",
+    component: "newmob/qjsq/detail/xsqjsqxq",
+    meta: {
+        id: "xsqjsqxq",
+        GNBS: "Stu_apply",
+        indexName: "学生请假申请详情",
+        keepAlive:true
+    }
+},
+{
+    path: "/xsdwxj",
+    name: "xsdwxj",
+    component: "newmob/qjsq/detail/xsdwxj",
+    meta: {
+        id: "xsdwxj",
+        GNBS: "Stu_apply",
+        indexName: "学生定位销假"
+    }
+},
+//{
+//    path: "/dwxq",
+//    name: "dwxq",
+//    component: "newmob/qjsq/detail/dwxq",
+//    meta: {
+//        id: "dwxq",
+//        GNBS: "Stu_apply",
+//        indexName: "定位"
+//    }
+//},
+{
+    path: "/xjsq",
+    name: "xjsq",
+    component: "newmob/qjsq/xjsq/xjsq",
+    meta: {
+        id: "xjsq",
+        GNBS: "Stu_apply",
+        indexName: "续假申请"
+    }
+},
+{
+    path: "/xjsuccess",
+    name: "xjsuccess",
+    component: "newmob/qjsq/xjsq/success",
+    meta: {
+        id: "xjsuccess",
+        GNBS: "Stu_apply",
+        indexName: "学生续假申请成功"
+    }
+},
+{
+    path: "/xjckshlc",
+    name: "xjckshlc",
+    component: "newmob/components/shlcInfo",
+    meta: {
+        id: "xjckshlc",
+        GNBS: ["Stu_apply","Tea_audit"],
+        indexName: "审核日志"
+    }
+},
+{
+    path: "/cxtj",
+    name: "cxtj",
+    component: "newmob/cxtj/cxtj",
+    redirect:"cxtj/mxb",
+    meta: {
+        id: "cxtj",
+        GNBS: "Tea_Cxtj",
+        isIndex: true,
+        indexName: "查询统计",
+        indexIconType: "iconPark",
+        indexIcon: "chart-histogram",
+        keepAlive: true
+    },
+    children: [
+        {
+            path: "mxb",
+            name: "mxb",
+            component: "newmob/cxtj/mxb/mxb",
+            meta: {
+                id: "mxb",
+                GNBS: "Tea_Cxtj",
+                keepAlive: true
+            }
+        },
+        {
+            path: "tjb",
+            name: "tjb",
+            component: "newmob/cxtj/tjb/tjb",
+            meta: {
+                id: "tjb",
+                GNBS: "Tea_Cxtj",
+                keepAlive: true
+            }
+        }
+    ]
+},
+{
+    path: "/mxbxq",
+    name: "mxbxq",
+    component: "newmob/cxtj/mxb/mxbxq/mxbxq",
+    meta: {
+        id: "mxbxq",
+        GNBS: "Tea_Cxtj"
+    }
+}
+];
+window.MOB_RESOURCE_CONFIG = [{
+	name: "util",
+	path: "public/util/util",
+	static: false
+}];
+

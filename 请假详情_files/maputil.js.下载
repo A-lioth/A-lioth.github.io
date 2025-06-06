@@ -1,0 +1,197 @@
+define(function (require, exports, module) {
+    var mapExtend = require("mapExtend");
+    var result = {
+        initBMap: function () {
+            return new Promise(function (resolve, reject) {
+                if (window.BMap) {
+                    resolve();
+                } else {
+                    MOB_UTIL.doPost({
+                        url: WIS_CONFIG.SWROOT_PATH + "/NewMobileAPIController/getBaiduMapKey.do",
+                        params: {}
+                    }).then(function (res) {
+                        var baiduMapKey = res.data.baiduMapKey || "";
+                        window.XgBaiduMapInitCallBack = function () {
+                            resolve();
+                        }
+                        var script = document.createElement("script");
+                        script.type = "text/javascript";
+                        script.src = "//api.map.baidu.com/api?v=2.0&ak=" + baiduMapKey + "&callback=XgBaiduMapInitCallBack";
+                        document.head.appendChild(script);
+                        script.onerror = function (err) {
+                            console.error("加载baiduMap错误：" + JSON.stringify(err));
+                            reject(err);
+                        };
+                    })
+                }
+            });
+        },
+        /**
+		 * 获取坐标和当前位置的距离
+		 */
+        curDistance: function (lng, lat) {
+            var dfd = $.Deferred();
+            var self = this;
+            this.getCurrentPosition().then(function(){
+            	 self.initBMap().then(function () {
+                     var curpoint = new BMap.Point(Number(window.curlng), Number(window.curlat));
+                     var destinpoint = new BMap.Point(Number(lng), Number(lat));
+                     var distance = self.getBaiduDistance(curpoint, destinpoint);
+                     dfd.resolve(distance);
+                 }).catch(function (err) {
+                     dfd.resolve(99999999.99);
+                 });
+            }).catch(function (err) {
+                dfd.resolve(99999999.99);
+            });           
+            return dfd.promise();
+        },
+        /**
+		 * 获取多个坐标和当前位置的距离
+		 */
+        curDistanceMultiple: function (arr) {
+            var dfd = $.Deferred();
+            var self = this;
+            this.getCurrentPosition().then(function(){
+            	 self.initBMap().then(function () {
+                     var curpoint = new BMap.Point(Number(window.curlng), Number(window.curlat));
+                     var distance = self.getBaiduDistanceMultiple(curpoint, arr);
+                     dfd.resolve(distance);
+                 }).catch(function (err) {
+                    var errList = arr.map(function(){
+                        return 99999999.99;
+                    });
+                     dfd.resolve(errList);
+                 });
+            }).catch(function (err) {
+                var errList = arr.map(function(){
+                    return 99999999.99;
+                });
+                 dfd.resolve(errList);
+            });           
+            return dfd.promise();
+        },
+        /**
+		 * 获取baiduMap距离，内部调用
+		 */
+        getBaiduDistance: function (pointA, pointB) {
+            if (window.baidumap == undefined) {
+                if (!$("#baidumapdiv").length > 0) {
+                    var html = "<div id='baidumapdiv'style='display:none'><div>"
+                    $('body').append(html);
+                }
+                window.baidumap = new BMap.Map("baidumapdiv");
+                var cen_point = new BMap.Point(116.378688937, 39.9076296510);
+                window.baidumap.centerAndZoom(cen_point, 16);
+            }
+            return window.baidumap.getDistance(pointA, pointB).toFixed(2);
+        },
+         /**
+         * 获取多个点位baiduMap距离，内部调用
+         */
+        getBaiduDistanceMultiple: function (pointA, arr) {
+            if (window.baidumap == undefined) {
+                if (!$("#baidumapdiv").length > 0) {
+                    var html = "<div id='baidumapdiv'style='display:none'><div>"
+                    $('body').append(html);
+                }
+                window.baidumap = new BMap.Map("baidumapdiv");
+                var cen_point = new BMap.Point(116.378688937, 39.9076296510);
+                window.baidumap.centerAndZoom(cen_point, 16);
+            }
+            var pointList = arr.map(function(item){
+                var pointB = new BMap.Point(Number(item[0]), Number(item[1]));
+                return window.baidumap.getDistance(pointA, pointB).toFixed(2);
+            });
+            return pointList;
+        },
+        gaode2baiduLocation: function (gg_lng, gg_lat) {
+            var X_PI = Math.PI * 3000.0 / 180.0;
+            var x = gg_lng, y = gg_lat;
+            var z = Math.sqrt(x * x + y * y) + 0.00002 * Math.sin(y * X_PI);
+            var theta = Math.atan2(y, x) + 0.000003 * Math.cos(x * X_PI);
+            var bd_lng = z * Math.cos(theta) + 0.0065;
+            var bd_lat = z * Math.sin(theta) + 0.006;
+            return { bd_lat: bd_lat, bd_lng: bd_lng };
+        },
+        baidu2gaodeLocation: function (bd_lng, bd_lat) {
+            var X_PI = Math.PI * 3000.0 / 180.0;
+            var x = bd_lng - 0.0065;
+            var y = bd_lat - 0.006;
+            var z = Math.sqrt(x * x + y * y) - 0.00002 * Math.sin(y * X_PI);
+            var theta = Math.atan2(y, x) - 0.000003 * Math.cos(x * X_PI);
+            var gg_lng = z * Math.cos(theta);
+            var gg_lat = z * Math.sin(theta);
+            return { lng: gg_lng, lat: gg_lat }
+        },
+        /**
+		 * 1、获取当前位置 2、根据浏览器类型调用不同的api 3、默认取百度jsapi进行位置获取（此方法获取的地理位置不准确）
+		 */
+        getCurrentPosition: function () {
+            var dfd = $.Deferred();
+            var self = this;
+            if (mapExtend.isUsed) {//兼容旧定制，定制最好在eksdk.js里定制
+                return mapExtend.getExtendLocation();
+            } else {
+                SDK.getCurrentPosition().then(function(res){
+                    console.log(res);
+                    var longitude = res.longitude; // 经度，浮点数，范围为180 ~ -180。
+                    var latitude = res.latitude; // 纬度，浮点数，范围为90 ~ -90
+                    if(res.isGaode){//是否需要使用高德转换坐标
+                        var position = self.gaode2baiduLocation(longitude, latitude);
+                        longitude = position.bd_lng;
+                        latitude = position.bd_lat;
+                    }
+                    window.curlng = longitude;
+                    window.curlat = latitude; 
+                    dfd.resolve(res);
+                },function(err){
+                	console.log("SDK定位失败，尝试使用百度地图定位！");
+                	console.error(err);
+                	self.getBaiduLocation().then(function(res){
+                		dfd.resolve(res);
+                	}).catch(function(err){
+                		 console.error(err);
+                		 Vue.prototype.$xgDialog.alert({
+                              title: "提示",
+                              message: "未开启定位权限，无法获取位置信息！"
+                         });
+                		 window.curlng = 0;
+                         window.curlat = 0;
+                         dfd.reject(err);
+                	});
+                });
+            }
+            return dfd.promise();
+        },
+        /**
+    	 * 1、使用js api进行的地图定位
+    	 * 2、获得的定位坐标挂在window变量中， 可全局使用
+    	 */
+    	getBaiduLocation:function(){
+    		var dfd = $.Deferred();
+    		this.initBMap().then(function () {
+    			var geolocation = new BMap.Geolocation();
+        		geolocation.getCurrentPosition(function(res){
+        			if(this.getStatus() == BMAP_STATUS_SUCCESS){
+        				var longitude = res.point.lng; // 经度，浮点数，范围为180 ~ -180。
+                        var latitude = res.point.lat;; // 纬度，浮点数，范围为90 ~ -90
+                        res.longitude = longitude;
+                        res.latitude = latitude;
+        				window.curlng = longitude;
+        				window.curlat = latitude;
+        				dfd.resolve(res);
+        			} else{
+                        dfd.reject(res);
+                    }     
+        		});
+            }).catch(function (err) {
+            	window.curlng = 0;
+                window.curlat = 0;
+                dfd.reject(err);
+            });
+    		return dfd.promise();
+    	}
+    };
+    return result;
+});

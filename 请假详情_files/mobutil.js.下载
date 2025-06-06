@@ -1,0 +1,498 @@
+define(function (require, exports, module) {
+    return {
+        XG_PAGEMETA_CACHE:{},
+        XG_SEARCHMETA_CACHE:{},
+        previewFile: function (type, url) {
+            var html = "<div id='xg-preivew' ><div>"
+            $('body').append(html);
+            new Vue({
+                template: "<xg-preview id='xg-preivew' :type='type' :url='url'/>",
+                components: {
+                    "xg-preview": MOB_INIT.loadComponent('publicVueComponent/preview/index')
+                },
+                data: function () {
+                    return {
+                        type: type,
+                        url: url
+                    }
+                }
+            }).$mount('#xg-preivew');
+        },
+        /**
+         * 异步数据请求
+         * @param params {url:"",method:"get or post",params:{}}
+         * @returns
+         */
+        doAxios: function (axiosOpt,params) {
+            var dfd = $.Deferred();
+            if (!params.noLoading) {
+                Vue.prototype.$xgLoading();
+            }
+            axios(axiosOpt).then(function (res) {
+                if (!params.noLoading) {
+                    Vue.prototype.$xgLoading.closeAll();
+                }
+                var result = res.data;
+                if (result.code === '0') {
+                    dfd.resolve(result);
+                } else {
+                    var msg = result.msg || '请尝试重新刷新页面！';
+                    if(typeof result == 'string' && result.indexOf('请求参数存在非法内容') >= 0){
+                		msg = "请求参数存在非法内容.";
+                	}
+                    Vue.prototype.$xgDialog.alert({
+                        title: "提示",
+                        message: msg
+                    });
+                    dfd.reject(result);
+                }
+            }).catch(function (err) {
+                //打印堆栈
+                console.error(err);
+                if (!params.noLoading) {
+                    Vue.prototype.$xgLoading.closeAll();
+                }
+                var title = "错误";
+                var message = err.message == 'Network Error' ? '网络连接不可用' : err.message;
+                if (err.response) {
+                    title = "网络错误(" + err.response.status + ")";
+                }
+                Vue.prototype.$xgDialog.alert({
+                    title: title,
+                    message:message
+                });
+                dfd.reject(err);
+            });
+            return dfd.promise();
+        },
+        /**
+         * get方式请求，尽量少用
+         * @param params  {url:"",params:{}}
+         * @returns
+         */
+        doGet: function (params) {
+            var axiosOpt = {
+                method: 'get',
+                params: {
+                    "data": encodeURI(JSON.stringify(params.params ? params.params : {}))
+                },
+                url: params.url
+            }
+            return this.doAxios(axiosOpt,params);
+        },
+        /**
+         * post异步数据请求，主要使用方式
+         * @param params {url:"",params:{}}
+         * @returns
+         */
+        doPost: function (params) {
+            var axiosOpt ={
+                method: 'post',
+                url: params.url,
+                data: params.params ? params.params : {},
+                transformRequest: [function (data) {
+                    if (Object.prototype.toString.call(data) == '[object FormData]') {
+                        return data;
+                    } else {
+                    	return "data=" + encodeURIComponent(JSON.stringify(data));
+                    }
+
+                }]
+            };
+            return this.doAxios(axiosOpt,params);
+        },
+        /**
+         * post异步数据请求，主要使用方式
+         * @param params {url:"",params:{}}
+         * @returns
+         */
+        doActionQuery: function (params) {
+            var dfd = $.Deferred();
+            Vue.prototype.$xgLoading();
+            axios({
+                method: 'post',
+                url: params.url,
+                params: params.params ? params.params : {}
+            }).then(function (res) {
+                Vue.prototype.$xgLoading.closeAll();
+                var result = res.data;
+                if (result.code === '0') {
+                    dfd.resolve(result.datas[params.name].rows);
+                } else {
+                    var msg = result.msg || '请尝试重新刷新页面！';
+                    Vue.prototype.$xgDialog.alert({
+                        title: "提示",
+                        message: msg
+                    });
+                    dfd.reject(result);
+                }
+            }).catch(function (err) {
+                //打印堆栈
+                console.error(err);
+                Vue.prototype.$xgLoading.closeAll();                
+                var title = "错误";
+                var message = err.message == 'Network Error' ? '网络连接不可用' : err.message;
+                if (err.response) {
+                    title = "网络错误(" + err.response.status + ")";
+                }
+                Vue.prototype.$xgDialog.alert({
+                    title: title,
+                    message:message
+                });
+                dfd.reject(err);
+            });
+            return dfd.promise();
+        },
+        /**
+         * 刷新字典
+         * 用于实时刷新字典内容
+         * @param appname 调用动作的app名称
+         * @param dicid	刷新的字典的id
+         */
+        refreshDic: function (appname, dicid) {
+            var axiosOpt = {
+                method: 'post',
+                url: WIS_CONFIG.ROOT_PATH + "/sys/emapcomponent/clearDicCache.do?app=" + appname + "&dic=" + dicid + "",
+                params: {}              
+            }
+            var params = {
+                noLoading:true
+            };
+            return this.doAxios(axiosOpt,params);
+        },
+        /**
+         * @method getModel
+         * @description 获取emap模型
+         * @param  {String} pagePath -  页面地址
+         * @param  {String} actionName - 动作名称
+         * @param  {String} type - 请求模型的类型，可选值 form search
+         * @example
+         * var formModel = getModel('modules/editForm.do', 'T_PXXX_XSJBXX_QUERY', 'form');
+         */
+        getModel: function (pagePath, actionName, type) {
+            //emapform的meta直接通过对象传入
+            if (typeof (pagePath) === 'object') {
+                return this.convertModel(pagePath, type);
+            }
+            var model = {};
+            if(type!='search'&&type!='grid'){
+                type = 'form';
+            }
+            if (type == 'search') {
+                model = this.getSearchMeta(pagePath, actionName);
+            } else {
+                var pageMeta = this.getPageMeta(pagePath);
+                var getData = pageMeta.filter(function (val) {
+                    return val.name == actionName
+                });
+                model = getData[0]||{};
+            }        
+            model = JSON.parse(JSON.stringify(model));
+            if (type == 'grid') {
+                return model;
+            }
+            return this.convertModel(model, type);
+        },
+        /**
+         * @method convertModelURL
+         * @description 转换模型请求路径，兼容多种情况
+         * @param {String} [pagePath] - 页面地址
+         * @example 
+         * convertModelURL(pagePath);
+         * newmob/editForm.do -> /emap/sys/appName/newmob/editForm.do
+         * /sys/appName/newmob/editForm.do -> /emap/sys/appName/newmob/editForm.do
+         * /appName/newmob/editForm.do -> /emap/sys/appName/newmob/editForm.do
+         */
+        convertModelURL: function (pagePath) {
+            if (pagePath === undefined) {
+                console && console.warn('模型路径传参为空！');
+                return pagePath;
+            }
+            pagePath = pagePath.substring(0, 1) == "/" ? pagePath : "/" + pagePath;
+            if (pagePath.substring(0, 4) == "/sys") {
+                return WIS_CONFIG.ROOT_PATH + pagePath;
+            } else {
+                return WIS_CONFIG.APPROOT_PATH + pagePath;
+            }
+        },
+        /**
+         * @method convertModel
+         * @description 转换模型
+         * @param {Object} model - 数据模型
+         * @param {String} [type] - 类型 可选值  'form' 'grid' 'search'
+         */
+        convertModel: function (model, type) {
+            if (model === undefined || model == null || JSON.stringify(model)=='{}') {
+                return undefined;
+            }
+            if (model instanceof Array) {
+                reSetAttribute(model);
+                needHiddenSyzd(model);
+                return model;
+            } else {
+                reSetAttribute(model.controls);
+                needHiddenSyzd(model.controls);
+                if (type == "search") {
+                    return model;
+                } else {
+                    return model.controls;
+                }
+            }  
+            function reSetAttribute(model_array) {
+                model_array.map(function (item) {
+                    for (const key in item) {
+                        var strs = key.split(".");
+                        if(strs.length==2&&strs[0]==type&&item[key]!=undefined&&item[key]!=null&&item[key]!=""){
+                            item[strs[1]] = item[key];
+                        }
+                    }
+                })
+            };
+            /**
+             * 否隐藏书院相关字段
+             * @param  dataModel 模型字段数组
+             */
+            function needHiddenSyzd(dataModel){
+                if("undefined" == typeof window.SFKQSYZ) {
+                    return dataModel;
+                }
+                if(window.SFKQSYZ) {
+                    for (var i = 0; i < dataModel.length; i++) {
+                        if(dataModel[i].name == 'MC' && dataModel[i].caption == '院系'){
+                            dataModel[i]['caption'] = "学院/书院";
+                        }
+                        if(dataModel[i].name == 'XYSYDM' && dataModel[i].caption == '学院'){
+                            dataModel[i]['caption'] = "学院/书院";
+                        }
+                        if(dataModel[i].name == 'YXJZSJ'){
+                            dataModel[i]['caption'] = "学院/书院截止日期";
+                        }
+                    } 
+                }else{
+                    for (var i = 0; i < dataModel.length; i++) {
+                        if(dataModel[i].name == 'SYDM' || dataModel[i].name == 'SYBJDM'){
+                            dataModel[i]['hidden'] = true;
+                            dataModel[i]['grid.fixed'] = true;
+                        }
+                    } 
+                }
+                return dataModel;
+            };
+        },
+       
+        /**
+         * @method getPageMeta
+         * @description 获取emap pageMeta数据
+         * @param  {String} pagePath - 页面地址
+         * @return {Object} pageMeta
+         */
+        getPageMeta: function (pagePath) {
+            url = this.convertModelURL(pagePath);
+            if (this.XG_PAGEMETA_CACHE[url]) {
+                return this.XG_PAGEMETA_CACHE[url];
+            }
+            var param = {
+                "*json": "1"
+            };
+            var pageMeta = [];
+            var self = this;
+            this.doSyncAjax(url, param, function (result) {
+                pageMeta = result.models || [];
+                self.XG_PAGEMETA_CACHE[url] = pageMeta;
+            });
+            return pageMeta;
+        },
+        /**
+         * @method getSearchMeta
+         * @description 获取emap pageMeta数据
+         * @param  {String} pagePath - 页面地址
+         * @return {Object} pageMeta
+         */
+        getSearchMeta: function (pagePath, actionName) {
+            var url = this.convertModelURL(pagePath);
+            var url = this.joinActionIdToDoUrl(url, actionName);
+            if (this.XG_SEARCHMETA_CACHE[url]) {
+                return this.XG_SEARCHMETA_CACHE[url];
+            }
+            var param = {
+                "*searchMeta": "1"
+            };
+            var searchMeta = {};
+            var self = this;
+            this.doSyncAjax(url, param, function (result) {
+                if (result.code == '0') {
+                    searchMeta = result.searchMeta || {};
+                    self.XG_SEARCHMETA_CACHE[url] = searchMeta;
+                } else {
+                    console.error("请求返回异常：[" + JSON.stringify(result) + "]");
+                }
+            });
+            return searchMeta;
+        },
+        joinActionIdToDoUrl: function (url, actionName) {
+            url = $.trim(url);
+            if (/\.do$/.test(url)) {
+                url = url.replace(/\.do$/, '/' + actionName + '.do');
+            } else if (/\.do\?/.test(url)) {
+                url = url.replace(/\.do\?/, '/' + actionName + '.do?');
+            } else if (/\.do\#/.test(url)) {
+                url = url.replace(/\.do\#/, '/' + actionName + '.do#');
+            } else if (/\.do\/\#/.test(url)) {
+                url = url.replace(/\.do\/\#/, '/' + actionName + '.do/#');
+            }
+            return url;
+        },
+        /**
+         * @method getDicDatas
+         * @description 获取epg模型model字典数据
+         * @param  {Object} model- epg模型
+         */
+        getDicDatas: function (model) {
+            var controls = model.controls || [];
+            var dicCodes = [];
+            for (var i in controls) {
+                if (controls[i].url && controls[i].url.indexOf("/code/") > -1) {
+                    var tmp = controls[i].url.substring(controls[i].url.indexOf("/code/") + 6);
+                    if (tmp.endsWith('.do')) {
+                        tmp = tmp.substring(0, tmp.length - 3);
+                    }
+                    var strs = tmp.split('/');
+                    if (strs.length == 1) {
+                        var dicCode = {
+                            name: controls[i].name,
+                            code: strs[0]
+                        };
+                        dicCodes.push(dicCode);
+                    } else if (strs.length == 2) {
+                        var dicCode = {
+                            name: controls[i].name,
+                            code: strs[0],
+                            type: strs[1]
+                        };
+                        dicCodes.push(dicCode);
+                    }
+                }
+            }
+            if (!(dicCodes.length > 0)) {
+                return model;
+            }
+            var param = {
+                appName: WIS_CONFIG.APPNAME,
+                dicCodes: JSON.stringify(dicCodes)
+            };
+            param = { "data": JSON.stringify(param) };
+            this.doSyncAjax(WIS_CONFIG.ROOT_PATH + "/sys/swpubapp/NewMobileAPIController/getDicDatas.do", param, function (result) {
+                if (result.code == '0') {
+                    var data = result.data || {};
+                    for (var i in controls) {
+                        var name = controls[i].name;
+                        if (data[name]) {
+                            controls[i].dicDatas = data[name];
+                        }
+                    }
+                    model.controls = controls;
+                } else {
+                    console.error("请求返回异常：[" + JSON.stringify(result) + "]");
+                }
+            });
+            return model;
+        },
+        doSyncAjax: function (url, param, callBack) {
+            $.ajax({
+                url: url,
+                type: 'post',
+                data: param,
+                async: false,
+                error: function (resp) {
+                    Vue.prototype.$xgDialog.alert({
+                        title: "提示",
+                        message: "请求返回异常，请检查network：" + resp.status
+                    });
+                },
+                success: function (result) {
+                    callBack(result);
+                }
+            });
+        },
+        /**
+		 * 浮点型乘法
+		 */
+        NumberMul:function(arg1, arg2){
+        	var m = 0;
+    		var s1 = arg1.toString();
+    		var s2 = arg2.toString();
+    		try {
+    			m += s1.split(".")[1].length;
+    		} catch (e) {
+    		}
+    		try {
+    			m += s2.split(".")[1].length;
+    		} catch (e) {
+    		}
+
+    		return Number(s1.replace(".", "")) * Number(s2.replace(".", ""))
+    				/ Math.pow(10, m);
+        },
+        /**
+		 * 浮点型加法
+		 */
+        NumberAdd : function() {
+        	var args = Array.prototype.slice.call(arguments);
+            var arr = args.map(function (e) {
+              try {
+                return e.toString().split(".")[1].length;
+              } catch (err) {
+                return 0;
+              }
+            });
+            var m = Math.pow(10, Math.max.apply(null, arr));
+            var n = Math.max.apply(null, arr);
+            var all = args.reduce(function (total, item) {
+              return total + item * m;
+            }, 0);
+            return Number((all / m).toFixed(n));
+        },
+        /**
+         * 浮点型减法
+         */
+        NumberSub : function(arg1, arg2) {
+        	var re1, re2, m, n;
+        	try {
+        		re1 = arg1.toString().split(".")[1].length;
+        	} catch (e) {
+        		re1 = 0;
+        	}
+        	try {
+        		re2 = arg2.toString().split(".")[1].length;
+        	} catch (e) {
+        		re2 = 0;
+        	}
+        	m = Math.pow(10, Math.max(re1, re2));
+        	n = (re1 >= re2) ? re1 : re2;
+        	return Number(((arg1 * m - arg2 * m) / m).toFixed(n));
+        },
+        /**
+         * 浮点型除法
+         */
+        NumberDiv : function(arg1, arg2, digit) {
+        	
+        	var t1 = 0, t2 = 0, r1, r2;
+    		try {
+    			t1 = arg1.toString().split(".")[1].length;
+    		} catch (e) {
+    		}
+    		try {
+    			t2 = arg2.toString().split(".")[1].length;
+    		} catch (e) {
+    		}
+    		r1 = Number(arg1.toString().replace(".", ""));
+    		r2 = Number(arg2.toString().replace(".", ""));
+    		//获取小数点后的计算值
+    		var result = ((r1 / r2) * Math.pow(10, t2 - t1)).toString();
+    		var result2 = result.split(".")[1] || "0";
+    		result2 = result2.substring(0, digit > result2.length ? result2.length: digit + 1);
+    		return Math.round(Number(result.split(".")[0] + "." + result2) * Math.pow(10, digit)) / Math.pow(10, digit);
+        }   
+    }
+    return result;
+});

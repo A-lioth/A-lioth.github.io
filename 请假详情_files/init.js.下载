@@ -1,0 +1,478 @@
+window.MOB_INIT = {
+    roles: [],
+    permissionArr: [],//权限列表
+    permissionDatas: {},//权限数据
+    permissionButtons: [],//权限按钮列表
+    isVisitor: false,
+    indexPages: [],//菜单列表
+    keepAlivePages: [],
+    curRouter: "",//当前路由
+
+    api: {
+        getUserRoles: WIS_CONFIG.SWROOT_PATH + "/NewMobileAPIController/getUserRoles.do",
+        setAppRole: WIS_CONFIG.SWROOT_PATH + "/NewMobileAPIController/setAppRole.do",
+        getMenuInfo: WIS_CONFIG.SWROOT_PATH + "/NewMobileAPIController/getMenuInfo.do"
+    },
+    /**
+     * 页面初始化人口
+     */
+    initPage: function () {
+        require.onError = function (err) {
+            console.error(err);
+        };
+        require.config({
+            urlArgs: 'v=' + randomValue,
+            waitSeconds: 0
+        });
+        require(['../../swpubapp/newmob/js/resources'], function (resources) {
+            var config = resources.getRequireConfig();
+            require.config(config);
+            //需要在手机上看控制台日志时可放开
+            if(WIS_CONFIG.VConsoleUserIds){
+            	var userIds = WIS_CONFIG.VConsoleUserIds.split(",");
+            	if(userIds.indexOf("all")>-1||(window.userId&&userIds.indexOf(window.userId)>-1)){
+                    require(["VConsole"],function(VConsole){
+                        new VConsole();
+                    });
+            	}
+            }
+            require(["jquery", "axios", "vue", "VueRouter", "xg-res","iconPark", "mobUtil","sentry"], function ($, axios, Vue, VueRouter, xgRes,iconPark,mobUtil,sentry) {
+                window.axios = axios;
+                window.Vue = Vue;
+                window.VueRouter = VueRouter;
+                window.MOB_UTIL = mobUtil;
+                Vue.use(VueRouter);
+                Vue.use(xgRes);
+                //注册防抖插件
+                Vue.directive('debounce',MOB_INIT.debounce());
+                /**
+                 * 用于解决ios fixed元素被键盘遮挡问题
+                 */
+                $(document).on("focus", ".van-popup--bottom input,.van-popup--bottom select,.van-popup--bottom textarea", function() {
+                    setTimeout(function() {
+                        const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight || 0;
+                        window.scrollTo(0, Math.max(scrollHeight - 1, 0));
+                    }, 500);
+                });
+                /**
+                 * 用于解决ios 微信虚拟键盘弹出使得页面乱窜的问题
+                 */
+                $(document).on("blur", "input,select,textarea", function() {
+                    setTimeout(function() {
+                        const scrollHeight = document.documentElement.scrollTop || document.body.scrollTop || 0;
+                        window.scrollTo(0, Math.max(scrollHeight - 1, 0));
+                    }, 100);
+                });
+                //记住路由
+                var tmpHref = location.href;
+                MOB_INIT.curRouter = "";
+                if (tmpHref.indexOf("#/") > -1) {
+                    MOB_INIT.curRouter = tmpHref.substring(tmpHref.indexOf("#/") + 1);
+                }
+                MOB_INIT.isVisitor = (userId == null || userId == undefined || userId == '' || userId == 'guest');
+                if (MOB_INIT.isVisitor) {
+                    MOB_INIT.initSDK().then(MOB_INIT.initApp);
+                } else {
+                    MOB_INIT.initSDK().then(MOB_INIT.getUserRoles);
+                }
+            });
+        });
+    },
+    /**
+     * SDK初始化
+     * @param callBack 
+     */
+    initSDK: function () {
+        var dfd = $.Deferred();
+        require(['initSDK'], function (obj) {
+            obj.init(function () {
+                dfd.resolve();
+            });
+        });
+        return dfd.promise();
+    },
+    /**
+     * 获取用户角色信息
+     */
+    getUserRoles: function () {
+        MOB_UTIL.doPost({
+            url: MOB_INIT.api.getUserRoles,
+            params: {
+                APPID: WIS_CONFIG.APPID
+            }
+        }).then(function (result) {
+            MOB_INIT.roles = result.data || [];
+            if (MOB_INIT.roles.length > 1) {
+                var autoSelectRole = false;
+                var selectIndex = 0;
+                if(window.roleIdByUrl){
+                    for (var i in MOB_INIT.roles) {
+                        if(MOB_INIT.roles[i].ROLEID==window.roleIdByUrl){
+                            autoSelectRole = true;
+                            selectIndex = i;
+                            break;
+                        }
+                    }
+                }
+                if(autoSelectRole){
+                     //直接设置角色
+                    MOB_UTIL.doPost({
+                        url: MOB_INIT.api.setAppRole,
+                        params: {
+                            APPID: WIS_CONFIG.APPID,
+                            APPNAME: WIS_CONFIG.APPNAME,
+                            ROLEID: MOB_INIT.roles[selectIndex].ROLEID
+                        }
+                    }).then(function () {
+                        window.roleId = MOB_INIT.roles[selectIndex].ROLEID;
+                        window.dataRole = MOB_INIT.roles[selectIndex].DATAROLE;
+                        MOB_INIT.getMenuInfo().then(function () {
+                            MOB_INIT.initApp();//渲染页面
+                        });
+                    });
+                }else{
+                    //多角色，渲染角色选择
+                    MOB_INIT.initSelectRole();
+                }           
+            } else if (MOB_INIT.roles.length == 1) {
+                //单角色，直接渲染app
+                MOB_UTIL.doPost({
+                    url: MOB_INIT.api.setAppRole,
+                    params: {
+                        APPID: WIS_CONFIG.APPID,
+                        APPNAME: WIS_CONFIG.APPNAME,
+                        ROLEID: MOB_INIT.roles[0].ROLEID
+                    }
+                }).then(function () {
+                    window.roleId = MOB_INIT.roles[0].ROLEID;
+                    window.dataRole = MOB_INIT.roles[0].DATAROLE;
+                    MOB_INIT.getMenuInfo().then(function () {
+                        MOB_INIT.initApp();//渲染页面
+                    });
+                });
+            } else {
+                //没有角色的空页面
+                new Vue({
+                    template: "<xg-empty type='nocontent' title='暂无角色' description='请联系管理员授权相关角色～'></xg-empty>",
+                }).$mount('#selectrole');
+            }
+        });
+    },
+    /**
+     * 初始化角色选择页面
+     * @param  roles 
+     */
+    initSelectRole: function () {
+        var routes = [{
+            path: '/',
+            name: 'selectrole',
+            component: MOB_INIT.loadComponent('../../swpubapp/newmob/component/selectrole/selectrole')
+        }];
+        var router = new VueRouter({
+            routes: routes
+        });
+        location.hash = '#/';
+        app = new Vue({
+            el: '#selectrole',
+            router: router
+        });
+    },
+    /**
+     * 获取授权菜单信息
+     * @returns 
+     */
+    getMenuInfo: function () {
+        var dfd = $.Deferred();
+        MOB_UTIL.doPost({
+            url: MOB_INIT.api.getMenuInfo,
+            params: {
+                APPNAME: WIS_CONFIG.APPNAME
+            }
+        }).then(function (result) {
+            var data = result.data || [];
+            MOB_INIT.permissionArr = [];
+            MOB_INIT.permissionDatas = {};
+            MOB_INIT.permissionButtons = [];
+            for (var i in data) {
+                MOB_INIT.permissionArr.push(data[i].GNBS);
+                MOB_INIT.permissionDatas[data[i].GNBS] = data[i];
+                var buttons = data[i].buttons || [];
+                if (buttons.length > 0) {
+                    for (var j in buttons) {
+                        MOB_INIT.permissionButtons.push(buttons[j]);
+                    }
+                }
+            }
+            dfd.resolve();
+        });
+        return dfd.promise();
+    },
+    /**
+     * 初始化app
+     * @param 
+     */
+    initApp: function () {
+        var routes = MOB_INIT.buildVueRoutes();
+        if (MOB_INIT.indexPages.length > 0) {
+            var hasAuth = MOB_INIT.checkAuth(routes);
+            if (hasAuth) {
+                location.hash = '#' + (MOB_INIT.curRouter || "/");
+            } else {
+                //无权限hash置空
+                location.hash = '#/';
+            }
+            //生成VueRouter对象
+            var router = new VueRouter({
+                routes: routes,
+                scrollBehavior: function (to, from, savedPosition) {
+                    return { x: 0, y: 0 };
+                }
+            });
+            //路由切换完成后执行的操作
+            router.afterEach(function (to, from, next) {
+                /**
+                 * 在切换路由后自动执行一个轻微滑动
+                 * 这样写的原因：ios在页面的高度比较高时，从其他页面返回该页面将会出现页面空白的现象
+                 * 需要轻触屏幕进行滑动才能恢复原页面
+                 */
+                if (!to.meta.keepAlive && !from.meta.keepAlive) {
+                    var top = document.body.scrollTop;
+                    document.body.scrollTop = top + 1;
+                    setTimeout(function () {
+                        document.body.scrollTop = top;
+                    }, 0);
+                }
+            });
+            //挂载主vue对象
+            new Vue({
+                template:"<xg-menu id='app'><xg-menu>",
+                data: function () {
+                    return {
+                        keepAlivePages: MOB_INIT.keepAlivePages || [],
+                    };
+                },
+                components:{
+                    xgMenu:MOB_INIT.loadComponent('../../swpubapp/newmob/component/menu/menu')
+                },
+                router: router 
+            }).$mount('#app');
+        } else {
+            //无权限hash置空
+            location.hash = '#/';
+            //没有菜单的空页面
+            new Vue({
+                template: "<xg-empty type='nocontent' title='暂无可用功能' description='请联系管理员授权相关功能～'></xg-empty>",
+            }).$mount('#app');
+        }
+        //应用初始化完成后删除掉选择角色的dom
+        $('#selectrole').remove();
+    },
+    buildVueRoutes: function () {
+        var tmpRouter = MOB_INIT.getRoutesConfig();
+        var routes = [];
+        MOB_INIT.indexPages = [];
+        MOB_INIT.keepAlivePages = [];
+        for (var i in tmpRouter) {
+            //过滤有权限的菜单数据
+            MOB_INIT.buildVueRouteOne(tmpRouter[i], routes, true);
+        }
+        if (!MOB_INIT.isVisitor) {//非游客页面重新对菜单进行排序
+            function sortIndexPages(a, b) {
+                return MOB_INIT.permissionArr.indexOf(a.meta.GNBS) - MOB_INIT.permissionArr.indexOf(b.meta.GNBS);
+            }
+            MOB_INIT.indexPages.sort(sortIndexPages);
+        }
+        return MOB_INIT.homePageProcess(routes);
+    },
+    /**
+     * 获取二开配置
+     * @param {*}  
+     * @returns 
+     */
+    getRoutesConfig: function () {
+        var routes = (MOB_INIT.isVisitor ? window.MOB_VISITOR_ROUTE_CONFIG : window.MOB_ROUTE_CONFIG) || [];
+        var routesExtend = (MOB_INIT.isVisitor ? window.MOB_VISITOR_ROUTE_CONFIG_EXTEND : window.MOB_ROUTE_CONFIG_EXTEND) || [];
+        //如果有二开扩展
+        if (routesExtend && routesExtend.length > 0) {
+            var extendMap = {};
+            for (var i in routesExtend) {
+                var name = routesExtend[i].name;
+                if (name) {
+                    extendMap[name] = routesExtend[i];
+                }
+            }
+            for (var i in routes) {
+                var name = routes[i].name;
+                if (extendMap.hasOwnProperty(name)) {
+                    routes[i] = extendMap[name];
+                }
+                delete extendMap[name];//覆盖路由无需重复添加
+            }
+            for (var name in extendMap) {
+            	routes.push(extendMap[name]);
+            }
+        }
+        return routes;
+    },
+    /**
+     * 
+     * @param {*} route 路由数据
+     * @param {*} result 结果数据
+     * @param {*} flag 是否子路由
+     */
+    buildVueRouteOne: function (route, result, flag) {
+        //过滤有权限的菜单数据
+        var meta = route.meta || {};
+        var gnbs = meta.GNBS;
+        //只加载游客路由和有权限的路由
+        if (MOB_INIT.isVisitor || MOB_INIT.checkGNBS(gnbs)) {
+            route.component = MOB_INIT.loadComponent(route.component);
+            if (route.children && route.children.length > 0) {
+                var childrenResult = [];
+                var childrenTmp = route.children;
+                for (var i in childrenTmp) {
+                    MOB_INIT.buildVueRouteOne(childrenTmp[i], childrenResult, false);//迭代遍历子路由
+                }
+                route.children = childrenResult;
+            }
+            //子路由不做菜单
+            if (flag && meta.isIndex) {
+                if (!MOB_INIT.isVisitor) {//非游客页面，菜单名取permission配置的菜单名
+                    route.meta.indexName = MOB_INIT.permissionDatas[gnbs].GNMC;
+                }
+                MOB_INIT.indexPages.push(route);
+            } 
+            result.push(route);
+            if (meta.keepAlive) {
+                //保存需要缓存的路由
+                MOB_INIT.keepAlivePages.push(route.name);
+            }
+        }
+    },
+    checkGNBS:function(gnbs){
+        if(gnbs==null||gnbs==undefined){
+            return false;
+        }
+        if(gnbs instanceof Array){
+            var flag = gnbs.some(function (tmp) {
+                return (MOB_INIT.permissionArr.indexOf(tmp) > -1|| MOB_INIT.permissionButtons.indexOf(tmp) > -1);
+            });
+            return flag;
+        }else{
+            return (MOB_INIT.permissionArr.indexOf(gnbs) > -1|| MOB_INIT.permissionButtons.indexOf(gnbs) > -1);
+        }
+
+    },
+    /**
+     * 处理首页
+     */
+    homePageProcess: function (routes) {
+        //至少需要一个首页
+        if (MOB_INIT.indexPages.length > 0) {
+            var defaultPath = MOB_INIT.indexPages[0].path;
+            for (var i in MOB_INIT.indexPages) {
+                if (MOB_INIT.indexPages[i].meta.isDefault) {
+                    defaultPath = MOB_INIT.indexPages[i].path;
+                    break;
+                }
+            }
+            var index = {
+                path: '/',
+                redirect: defaultPath
+            };
+            routes.push(index);
+        }
+        return routes;
+    },
+    /**
+     * 校验当前hash是否属于用户权限范围内
+     */
+    checkAuth: function (routes, parent) {
+    	parent = parent||"";
+        if (parent.endsWith("/")) {
+            parent = parent.substring(0, parent.length - 1);
+        }
+        return routes.some(function (route) {
+            var path = route.path;
+            if (!path.indexOf("/") == 0) {
+                path = "/" + path;
+            }
+            if(path=='/'){
+                return false;
+            }
+            if (route.children && route.children.length > 0) {
+                return MOB_INIT.curRouter == (parent + path)||MOB_INIT.checkAuth(route.children, parent + path);
+            } else {
+                return MOB_INIT.curRouter.indexOf(parent + path) > -1;
+            }
+        });
+    },
+    /**
+     * 加载组件
+     */
+    loadComponent: function (path) {
+        return function () {
+            var dfd = $.Deferred();
+            require([path], function (componentInit) {
+                var component = componentInit();
+                component.template = MOB_INIT.compileTpl(component.template);
+                dfd.resolve(component);
+            });
+            return dfd.promise();
+        };
+    },
+    /**
+     * 正则扫描模板文件，实现按钮权限
+     */
+    compileTpl: function (tpl) {
+        //获取tpl中所有权限id
+        var tplIds = [];
+        var result;
+        var pattern = new RegExp('auth-id=[\'|\"]{1}[^\'^\"]+[\'|\"]{1}', 'gm');
+        while ((result = pattern.exec(tpl)) != null) {
+            tplIds.push(result[0].substring(9, result[0].length - 1));
+        };
+        if (tplIds.length == 0) {
+            return tpl;
+        }
+        //删除所有无权限的dom
+        tplIds.forEach(function (id, index) {
+            if (MOB_INIT.permissionButtons.indexOf(id) == '-1') {
+                var regExp = new RegExp('<[^/].*(auth.*?auth-id=[\'|\"]{1}' + id + '[\'|\"]{1})[\\s\\S]*?>[\\s\\S]*?</.*?auth>', 'gm');
+                tpl = tpl.replace(regExp, "");
+            }
+        });
+        return tpl;
+    },
+    /**
+     * 防抖
+     * @returns 
+     */
+    debounce:function(){
+        return {
+            bind: function (el, binding) {
+                var thorttleTime = binding.value||300;
+                var timer = null;
+                var disable = false;
+                el.__handleClick__ = function (event) {
+                    if (timer) {
+                        clearInterval(timer);
+                    }
+                    if(disable){
+                        event&&event.stopImmediatePropagation();  
+                    }else{
+                        disable = true;
+                    }
+                    timer = setTimeout(function() {
+                        disable = false;
+                        clearInterval(timer);
+                    }, thorttleTime);
+                };
+                el.addEventListener('click', el.__handleClick__,true);
+            },
+            unbind: function (el) {
+                el.removeEventListener('click', el.__handleClick__);
+            }
+        }
+    }
+}
