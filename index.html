@@ -15,15 +15,81 @@
 
   <!-- 防直连访问检查 -->
   <script>
-    if (!localStorage.getItem('access_granted')) {
-      alert('请先通过登录页面验证！');
-      window.location.href = 'login.html';
+    if (localStorage.getItem('access_granted') !== 'true') {
+      window.location.replace('login.html');
+      throw new Error('未验证，终止后续脚本');
+    }
+    // else {
+    //   window.location.replace('login.html');
+    // }
+
+    // 时间格式校验函数
+    function isValidDateTime(str, withSec = false) {
+      // 允许格式：YYYY-MM-DD HH:mm 或 YYYY-MM-DD HH:mm:ss
+      const reg = withSec
+        ? /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/
+        : /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;
+      return reg.test(str);
     }
 
+    // 遮罩提示
+    function showMask(msg) {
+      let mask = document.getElementById('mask-tip');
+      if (!mask) {
+        mask = document.createElement('div');
+        mask.id = 'mask-tip';
+        mask.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.35);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        mask.innerHTML = `<div style="background:#fff;padding:32px 24px;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.12);font-size:18px;color:#2e8cf0;text-align:center;max-width:80vw;">${msg}<br><button style="margin-top:18px;padding:8px 24px;border:none;background:#2e8cf0;color:#fff;border-radius:6px;font-size:16px;cursor:pointer;" onclick="document.getElementById('mask-tip').remove()">知道了</button></div>`;
+        document.body.appendChild(mask);
+      } else {
+        mask.querySelector('div').innerHTML = `${msg}<br><button style="margin-top:18px;padding:8px 24px;border:none;background:#2e8cf0;color:#fff;border-radius:6px;font-size:16px;cursor:pointer;" onclick="document.getElementById('mask-tip').remove()">知道了</button>`;
+        mask.style.display = 'flex';
+      }
+    }
+
+    // 监听所有时间字段输入，实时校验
+    document.addEventListener('DOMContentLoaded', function () {
+      const formData = JSON.parse(localStorage.getItem('form_data'));
+      if (!formData) return;
+
+      // 时间字段及校验规则
+      const timeFields = [
+        { key: 'approveDateTime', label: '审核通过时间', withSec: false },
+        { key: 'startTime', label: '请假开始时间', withSec: false },
+        { key: 'endTime', label: '请假结束时间', withSec: false },
+        { key: 'submitTime', label: '发起时间', withSec: true },
+        { key: 'auditTime', label: '审核时间', withSec: true }
+      ];
+
+      // 实时校验（模拟输入场景，实际为数据注入后校验）
+      for (const t of timeFields) {
+        if (!isValidDateTime(formData[t.key], t.withSec)) {
+          showMask(`${t.label}格式错误，请返回登录页面重新填写！`);
+          return;
+        }
+      }
+
+      // ...existing code...
+    });
     // 获取表单数据并注入
     document.addEventListener('DOMContentLoaded', function () {
       const formData = JSON.parse(localStorage.getItem('form_data'));
       if (!formData) return;
+
+      // 校验所有时间字段格式
+      const timeFields = [
+        { value: formData.approveDateTime, label: '审核通过时间', withSec: false },
+        { value: formData.startTime, label: '请假开始时间', withSec: false },
+        { value: formData.endTime, label: '请假结束时间', withSec: false },
+        { value: formData.submitTime, label: '发起时间', withSec: true },
+        { value: formData.auditTime, label: '审核时间', withSec: true }
+      ];
+      for (const t of timeFields) {
+        if (!isValidDateTime(t.value, t.withSec)) {
+          showMask(`${t.label}格式错误，请返回登录页面重新填写！`);
+          return;
+        }
+      }
 
       // 更新审核通过时间提示
       const notifyContent = document.querySelector('.xg-notify-content');
@@ -33,7 +99,6 @@
         const [hour, minute] = time.split(':');
         notifyContent.textContent = `已审核通过 ${year}年${month}月${day}日${hour}时${minute}分`;
       }
-
 
       // 精确匹配标签并更新内容
       function updateField(label, value) {
@@ -66,11 +131,16 @@
       updateField('请假天数', formData.leaveDays);
       updateField('是否出校', formData.isLeaveSchool);
 
-      // 审核流程
-      const dateElements = document.querySelectorAll('.pages-audit__date');
-      if (dateElements.length >= 2) {
-        dateElements[0].textContent = formData.submitTime;
-        dateElements[1].textContent = formData.auditTime;
+
+      // 审核流程（发起时间和审核时间）
+      // 第一个 .pages-audit__date 是发起时间，第二个是审核时间
+      const dateSpans = document.querySelectorAll('.pages-audit__auditMind .pages-audit__date');
+      if (dateSpans.length > 0) {
+        dateSpans[0].textContent = formData.submitTime;
+      }
+      const auditDateDivs = document.querySelectorAll('.pages-audit__items .pages-audit__date');
+      if (auditDateDivs.length > 1) {
+        auditDateDivs[1].textContent = formData.auditTime;
       }
 
       const auditorElement = document.querySelector('.pages-audit__auditor');
@@ -491,7 +561,7 @@
           </form>
         </div>
         <div class="xg-emap-form" emap-role="form"
-          emap="{&quot;emap-name&quot;:&quot;yddxsxjxqbd&quot;,&quot;emap-app-name&quot;:&quot;swmxsqjapp&quot;,&quot;emap-model-name&quot;:&quot;yddxsxjxqbdModel&quot;}">
+          emap="{&quot;emap-name&quot;:&quot;yddxsqjxqbd&quot;,&quot;emap-app-name&quot;:&quot;swmxsqjapp&quot;,&quot;emap-model-name&quot;:&quot;yddxsqjxqbdModel&quot;}">
           <form class="van-form"><!---->
             <div class="xg-emap-form__group-border">
               <div class="xg-emap-form-group-title">
@@ -592,12 +662,12 @@
         </div>
       </div> <!----> <!---->
     </div>
-    <div class="menu-div" style="padding: 8px 0px 11px; display: none;">
-      <div class="menu-item xg-text-color--minor">
-        <div class="menu-item-icon"><i class="van-icon van-icon-home-o" style="font-size: 22px;"><!----></i></div>
-        <div class="menu-item-text">请假申请</div>
-      </div> <!---->
-    </div>
+    <div class="menu-div" style="padding: 8px 0px 11px; display: none;"></div>
+    <div class="menu-item xg-text-color--minor">
+      <div class="menu-item-icon"><i class="van-icon van-icon-home-o" style="font-size: 22px;"><!----></i></div>
+      <div class="menu-item-text">请假申请</div>
+    </div> <!---->
+  </div>
   </div>
   <script>
     //页面初始化

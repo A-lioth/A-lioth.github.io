@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>请假系统登录</title>
+    <title>嗨嗨嗨</title>
     <link href="请假详情_files/style.css" rel="stylesheet">
     <style>
         .login-container {
@@ -158,8 +158,8 @@
 
             <div class="form-group" style="display:flex;align-items:center;gap:12px;">
                 <label style="margin-bottom:0;min-width:110px;">请假事由</label>
-                <textarea id="leaveReason" class="form-control" style="margin-bottom:0;flex:1;resize:none;height:40px;"
-                    required></textarea>
+                <input type="text" id="leaveReason" class="form-control" required style="margin-bottom:0;flex:1;"
+                    required></>
             </div>
 
             <div class="form-group" style="display:flex;align-items:center;gap:12px;">
@@ -228,16 +228,11 @@
             // 验证神秘代码
             const secretCode = document.getElementById('secretCode').value;
             if (secretCode !== '123') {
-                alert('神秘代码错误，请重新输入！');
+                showMask('神秘代码错误，请重新输入！');
                 return false;
             }
 
-            // 收集表单数据
-
             // 审核通过时间格式化为 index.html 所需格式
-            const approveDateTime = `${document.getElementById('approveYear').value}-${String(document.getElementById('approveMonth').value).padStart(2, '0')}-${String(document.getElementById('approveDay').value).padStart(2, '0')} ${String(document.getElementById('approveHour').value).padStart(2, '0')}:${String(document.getElementById('approveMinute').value).padStart(2, '0')}`;
-
-            // 请假开始/结束时间格式化为 index.html 所需格式
             function formatToIndex(dtStr) {
                 if (!dtStr) return '';
                 const d = new Date(dtStr);
@@ -252,7 +247,7 @@
             }
 
             const userData = {
-                approveDateTime: approveDateTime,
+                approveDateTime: formatToIndex(document.getElementById('approveDateTime').value),
                 studentId: document.getElementById('studentId').value,
                 name: document.getElementById('name').value,
                 department: document.getElementById('department').value,
@@ -274,25 +269,43 @@
             localStorage.setItem('access_granted', 'true');
             localStorage.setItem('form_data', JSON.stringify(userData));
 
-            // 跳转到 index.html
-            window.location.href = 'index.html';
+            // 跳转到 index.html（仅在未弹出遮罩时执行跳转）
+            if (!document.getElementById('mask-tip')) {
+                window.location.replace('index.html');
+            }
             return false;
         }
 
-        // 设置所有时间字段默认值为当前时间
+        // 遮罩提示（不暴露网址）
+        function showMask(msg) {
+            let mask = document.getElementById('mask-tip');
+            if (!mask) {
+                mask = document.createElement('div');
+                mask.id = 'mask-tip';
+                mask.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.35);z-index:9999;display:flex;align-items:center;justify-content:center;';
+                mask.innerHTML = `<div style="background:#fff;padding:32px 24px;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.12);font-size:18px;color:#2e8cf0;text-align:center;max-width:80vw;">${msg}<br><button style="margin-top:18px;padding:8px 24px;border:none;background:#2e8cf0;color:#fff;border-radius:6px;font-size:16px;cursor:pointer;" onclick="document.getElementById('mask-tip').remove()">知道了</button></div>`;
+                document.body.appendChild(mask);
+            } else {
+                mask.querySelector('div').innerHTML = `${msg}<br><button style="margin-top:18px;padding:8px 24px;border:none;background:#2e8cf0;color:#fff;border-radius:6px;font-size:16px;cursor:pointer;" onclick="document.getElementById('mask-tip').remove()">知道了</button>`;
+                mask.style.display = 'flex';
+            }
+        }
+
+        // 设置所有时间字段默认值为当前时间（修复发起时间默认值格式问题）
         function pad(n) { return String(n).padStart(2, '0'); }
         function getDateTimeLocalString(withSec = false) {
             const now = new Date();
             const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
             const time = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
             const sec = pad(now.getSeconds());
+            // input[type=datetime-local] 需要 "YYYY-MM-DDTHH:mm" 或 "YYYY-MM-DDTHH:mm:ss"
             return withSec ? `${date}T${time}:${sec}` : `${date}T${time}`;
         }
         document.getElementById('approveDateTime').value = getDateTimeLocalString(false);
         document.getElementById('startTime').value = getDateTimeLocalString(false);
         document.getElementById('endTime').value = getDateTimeLocalString(false);
-        document.getElementById('submitTime').value = getDateTimeLocalString(true);
-        document.getElementById('auditTime').value = getDateTimeLocalString(true);
+        document.getElementById('submitTime').value = getDateTimeLocalString(false);
+        document.getElementById('auditTime').value = getDateTimeLocalString(false);
     </script>
 </body>
 
