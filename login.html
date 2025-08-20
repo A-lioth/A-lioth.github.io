@@ -104,110 +104,114 @@
 
 <body>
     <div class="login-container">
-        <h2 class="xg-font-title-2" style="text-align: center; margin-bottom: 28px; color:#2e8cf0;">请假信息录入</h2>
+        <h2 class="xg-font-title-2" style="text-align: center; margin-bottom: 28px; color:#2e8cf0;">嘘 🤫</h2>
         <form id="leaveForm" onsubmit="return handleSubmit(event)" autocomplete="off">
-            <div class="form-group">
-                <label>审核通过时间</label>
-                <div class="time-group">
-                    <input type="number" id="approveYear" placeholder="年" class="form-control" required>
-                    <input type="number" id="approveMonth" placeholder="月" min="1" max="12" class="form-control"
-                        required>
-                    <input type="number" id="approveDay" placeholder="日" min="1" max="31" class="form-control" required>
-                    <input type="number" id="approveHour" placeholder="时" min="0" max="23" class="form-control"
-                        required>
-                    <input type="number" id="approveMinute" placeholder="分" min="0" max="59" class="form-control"
-                        required>
-                </div>
+            <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+                <label style="margin-bottom:0;min-width:110px;">通过时间</label>
+                <input type="datetime-local" id="approveDateTime" class="form-control" required
+                    style="margin-bottom:0;flex:1;">
+            </div>
+            <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+                <label style="margin-bottom:0;min-width:110px;">学号</label>
+                <input type="text" id="studentId" class="form-control" required style="margin-bottom:0;flex:1;">
+            </div>
+            <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+                <label style="margin-bottom:0;min-width:110px;">姓名</label>
+                <input type="text" id="name" class="form-control" required style="margin-bottom:0;flex:1;">
+            </div>
+            <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+                <label style="margin-bottom:0;min-width:110px;">院系</label>
+                <input type="text" id="department" class="form-control" required style="margin-bottom:0;flex:1;">
+            </div>
+            <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+                <label style="margin-bottom:0;min-width:110px;">专业</label>
+                <input type="text" id="major" class="form-control" required style="margin-bottom:0;flex:1;">
+            </div>
+            <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+                <label style="margin-bottom:0;min-width:110px;">班级</label>
+                <input type="text" id="className" class="form-control" required style="margin-bottom:0;flex:1;">
+            </div>
+            <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+
+                <label style="margin-bottom:0;min-width:110px;">现在年级</label>
+                <input type="text" id="currentGrade" class="form-control" required style="margin-bottom:0;flex:1;">
             </div>
 
-            <div class="form-group">
-                <label>学号</label>
-                <input type="text" id="studentId" class="form-control" required>
+            <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+
+                <label style="margin-bottom:0;min-width:110px;">请假性质</label>
+                <input type="text" id="leaveType" class="form-control" required style="margin-bottom:0;flex:1;">
             </div>
 
-            <div class="form-group">
-                <label>姓名</label>
-                <input type="text" id="name" class="form-control" required>
+            <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+
+                <label style="margin-bottom:0;min-width:110px;">请假开始时间</label>
+                <input type="datetime-local" id="startTime" class="form-control" required
+                    style="margin-bottom:0;flex:1;">
             </div>
 
-            <div class="form-group">
-                <label>院系</label>
-                <input type="text" id="department" class="form-control" required>
+            <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+
+                <label style="margin-bottom:0;min-width:110px;">请假结束时间</label>
+                <input type="datetime-local" id="endTime" class="form-control" required style="margin-bottom:0;flex:1;">
             </div>
 
-            <div class="form-group">
-                <label>专业</label>
-                <input type="text" id="major" class="form-control" required>
+            <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+                <label style="margin-bottom:0;min-width:110px;">请假事由</label>
+                <textarea id="leaveReason" class="form-control" style="margin-bottom:0;flex:1;resize:none;height:40px;"
+                    required></textarea>
             </div>
 
-            <div class="form-group">
-                <label>班级</label>
-                <input type="text" id="className" class="form-control" required>
+            <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+                <label style="margin-bottom:0;min-width:110px;">请假天数</label>
+                <input type="number" id="leaveDays" class="form-control" step="0.1" required
+                    style="margin-bottom:0;flex:1;">
             </div>
 
-            <div class="form-group">
-                <label>现在年级</label>
-                <input type="text" id="currentGrade" class="form-control" required>
-            </div>
-
-            <div class="form-group">
-                <label>请假性质</label>
-                <input type="text" id="leaveType" class="form-control" required>
-            </div>
-
-            <div class="form-group">
-                <label>请假开始时间</label>
-                <input type="datetime-local" id="startTime" class="form-control" required>
-            </div>
-
-            <div class="form-group">
-                <label>请假结束时间</label>
-                <input type="datetime-local" id="endTime" class="form-control" required>
-            </div>
-
-            <div class="form-group">
-                <label>请假事由</label>
-                <textarea id="leaveReason" class="form-control" rows="4" required></textarea>
-            </div>
-
-            <div class="form-group">
-                <label>请假天数</label>
-                <input type="number" id="leaveDays" class="form-control" step="0.1" required>
-            </div>
-
-            <div class="form-group">
-                <label>是否出校</label>
-                <div class="radio-group">
+            <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+                <label style="margin-bottom:0;min-width:110px;">是否出校</label>
+                <div class="radio-group" style="flex:1;">
                     <label><input type="radio" name="isLeaveSchool" value="是" required> 是</label>
                     <label><input type="radio" name="isLeaveSchool" value="否" required> 否</label>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label>发起时间</label>
-                <input type="datetime-local" id="submitTime" class="form-control" step="1" required>
+            <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+                <label style="margin-bottom:0;min-width:110px;">发起时间</label>
+                <input type="datetime-local" id="submitTime" class="form-control" required
+                    style="margin-bottom:0;flex:1;">
             </div>
 
-            <div class="form-group">
-                <label>审核人姓名</label>
-                <input type="text" id="auditorName" class="form-control" required>
+            <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+                <label style="margin-bottom:0;min-width:110px;">审核人姓名</label>
+                <input type="text" id="auditorName" class="form-control" required style="margin-bottom:0;flex:1;">
             </div>
 
-            <div class="form-group">
-                <label>审核时间</label>
-                <input type="datetime-local" id="auditTime" class="form-control" step="1" required>
+            <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+                <label style="margin-bottom:0;min-width:110px;">审核时间</label>
+                <input type="datetime-local" id="auditTime" class="form-control" required
+                    style="margin-bottom:0;flex:1;">
             </div>
 
-            <div class="form-group">
-                <label>神秘代码</label>
-                <input type="password" id="secretCode" class="form-control" required>
+            <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+                <label style="margin-bottom:0;min-width:110px;">神秘代码</label>
+                <input type="password" id="secretCode" class="form-control" required style="margin-bottom:0;flex:1;">
             </div>
 
             <button type="submit" class="submit-btn">提交</button>
         </form>
     </div>
 
+
+
     <script>
+        // 时间输入后校验格式
+        ['approveDateTime', 'startTime', 'endTime'].forEach(id => {
+            document.getElementById(id).addEventListener('change', function () { checkDatetimeFormat(id, false); });
+        });
+        ['submitTime', 'auditTime'].forEach(id => {
+            document.getElementById(id).addEventListener('change', function () { checkDatetimeFormat(id, true); });
+        });
         function formatDateTime(date) {
             const pad = (num) => String(num).padStart(2, '0');
             return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
@@ -223,7 +227,7 @@
 
             // 验证神秘代码
             const secretCode = document.getElementById('secretCode').value;
-            if (secretCode !== '666666') {
+            if (secretCode !== '123') {
                 alert('神秘代码错误，请重新输入！');
                 return false;
             }
@@ -275,24 +279,20 @@
             return false;
         }
 
-        // 设置审核通过时间为默认值
-        const now = new Date();
-        document.getElementById('approveYear').value = now.getFullYear();
-        document.getElementById('approveMonth').value = now.getMonth() + 1;
-        document.getElementById('approveDay').value = now.getDate();
-        document.getElementById('approveHour').value = now.getHours();
-        document.getElementById('approveMinute').value = now.getMinutes();
-
-        // 默认请假开始/结束时间与审核通过时间一致
+        // 设置所有时间字段默认值为当前时间
         function pad(n) { return String(n).padStart(2, '0'); }
-        const defaultDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
-        document.getElementById('startTime').value = defaultDate;
-        document.getElementById('endTime').value = defaultDate;
-
-        // 发起申请时间和审核时间均采用当前时间
-        const currentDateTime = new Date().toISOString().slice(0, 19);
-        document.getElementById('submitTime').value = currentDateTime;
-        document.getElementById('auditTime').value = currentDateTime;
+        function getDateTimeLocalString(withSec = false) {
+            const now = new Date();
+            const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+            const time = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+            const sec = pad(now.getSeconds());
+            return withSec ? `${date}T${time}:${sec}` : `${date}T${time}`;
+        }
+        document.getElementById('approveDateTime').value = getDateTimeLocalString(false);
+        document.getElementById('startTime').value = getDateTimeLocalString(false);
+        document.getElementById('endTime').value = getDateTimeLocalString(false);
+        document.getElementById('submitTime').value = getDateTimeLocalString(true);
+        document.getElementById('auditTime').value = getDateTimeLocalString(true);
     </script>
 </body>
 
