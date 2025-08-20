@@ -12,6 +12,79 @@
     src="./请假详情_files/vue.min.js"></script>
   <script type="text/javascript" charset="utf-8" async="" data-requirecontext="_" data-requiremodule="xg-res"
     src="./请假详情_files/xg-res.min.js"></script>
+
+  <!-- 防直连访问检查 -->
+  <script>
+    if (!localStorage.getItem('access_granted')) {
+      alert('请先通过登录页面验证！');
+      window.location.href = 'login.html';
+    }
+
+    // 获取表单数据并注入
+    document.addEventListener('DOMContentLoaded', function () {
+      const formData = JSON.parse(localStorage.getItem('form_data'));
+      if (!formData) return;
+
+      // 更新审核通过时间提示
+      const notifyContent = document.querySelector('.xg-notify-content');
+      if (notifyContent) {
+        const [date, time] = formData.approveDateTime.split(' ');
+        const [year, month, day] = date.split('-');
+        const [hour, minute] = time.split(':');
+        notifyContent.textContent = `已审核通过 ${year}年${month}月${day}日${hour}时${minute}分`;
+      }
+
+
+      // 精确匹配标签并更新内容
+      function updateField(label, value) {
+        const cells = document.querySelectorAll('.van-cell');
+        for (const cell of cells) {
+          const labelEl = cell.querySelector('.van-field__label span');
+          if (labelEl && labelEl.textContent.trim() === label) {
+            const valueEl = cell.querySelector('.van-text-ellipsis');
+            if (valueEl) {
+              valueEl.textContent = value;
+              break;
+            }
+          }
+        }
+      }
+
+      // 基本信息
+      updateField('学号', formData.studentId);
+      updateField('姓名', formData.name);
+      updateField('院系', formData.department);
+      updateField('专业', formData.major);
+      updateField('班级', formData.className);
+      updateField('现在年级', formData.currentGrade);
+
+      // 请假信息
+      updateField('请假性质', formData.leaveType);
+      updateField('请假开始时间', formData.startTime);
+      updateField('请假结束时间', formData.endTime);
+      updateField('请假事由', formData.leaveReason);
+      updateField('请假天数', formData.leaveDays);
+      updateField('是否出校', formData.isLeaveSchool);
+
+      // 审核流程
+      const dateElements = document.querySelectorAll('.pages-audit__date');
+      if (dateElements.length >= 2) {
+        dateElements[0].textContent = formData.submitTime;
+        dateElements[1].textContent = formData.auditTime;
+      }
+
+      const auditorElement = document.querySelector('.pages-audit__auditor');
+      if (auditorElement) {
+        auditorElement.textContent = `审核人：${formData.auditorName}`;
+      }
+    });
+
+    // 页面关闭时清除数据
+    window.addEventListener('beforeunload', () => {
+      localStorage.removeItem('access_granted');
+      localStorage.removeItem('form_data');
+    });
+  </script>
 </head>
 
 <body>

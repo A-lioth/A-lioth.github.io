@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>请假系统登录</title>
+    <link href="请假详情_files/style.css" rel="stylesheet">
+    <style>
+        .login-container {
+            max-width: 480px;
+            margin: 32px auto;
+            padding: 32px 24px 24px 24px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(46, 140, 240, 0.08);
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #2e8cf0;
+            font-size: 15px;
+        }
+
+        .form-group label::after {
+            content: " *";
+            color: red;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e0e7ef;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 15px;
+            background: #f8faff;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: #2e8cf0;
+            outline: none;
+        }
+
+        .time-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .time-group input {
+            width: 80px;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 20px;
+        }
+
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            font-weight: normal;
+        }
+
+        .radio-group label::after {
+            content: "";
+        }
+
+        .submit-btn {
+            background: linear-gradient(90deg, #2e8cf0 0%, #2678d6 100%);
+            color: #fff;
+            padding: 12px 0;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 17px;
+            font-weight: 600;
+            margin-top: 28px;
+            box-shadow: 0 2px 8px rgba(46, 140, 240, 0.08);
+            letter-spacing: 1px;
+            transition: background 0.2s;
+        }
+
+        .submit-btn:hover {
+            background: linear-gradient(90deg, #2678d6 0%, #2e8cf0 100%);
+        }
+
+        @media (max-width: 768px) {
+            .login-container {
+                margin: 10px;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-container">
+        <h2 class="xg-font-title-2" style="text-align: center; margin-bottom: 28px; color:#2e8cf0;">请假信息录入</h2>
+        <form id="leaveForm" onsubmit="return handleSubmit(event)" autocomplete="off">
+            <div class="form-group">
+                <label>审核通过时间</label>
+                <div class="time-group">
+                    <input type="number" id="approveYear" placeholder="年" class="form-control" required>
+                    <input type="number" id="approveMonth" placeholder="月" min="1" max="12" class="form-control"
+                        required>
+                    <input type="number" id="approveDay" placeholder="日" min="1" max="31" class="form-control" required>
+                    <input type="number" id="approveHour" placeholder="时" min="0" max="23" class="form-control"
+                        required>
+                    <input type="number" id="approveMinute" placeholder="分" min="0" max="59" class="form-control"
+                        required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>学号</label>
+                <input type="text" id="studentId" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label>姓名</label>
+                <input type="text" id="name" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label>院系</label>
+                <input type="text" id="department" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label>专业</label>
+                <input type="text" id="major" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label>班级</label>
+                <input type="text" id="className" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label>现在年级</label>
+                <input type="text" id="currentGrade" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label>请假性质</label>
+                <input type="text" id="leaveType" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label>请假开始时间</label>
+                <input type="datetime-local" id="startTime" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label>请假结束时间</label>
+                <input type="datetime-local" id="endTime" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label>请假事由</label>
+                <textarea id="leaveReason" class="form-control" rows="4" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>请假天数</label>
+                <input type="number" id="leaveDays" class="form-control" step="0.1" required>
+            </div>
+
+            <div class="form-group">
+                <label>是否出校</label>
+                <div class="radio-group">
+                    <label><input type="radio" name="isLeaveSchool" value="是" required> 是</label>
+                    <label><input type="radio" name="isLeaveSchool" value="否" required> 否</label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>发起时间</label>
+                <input type="datetime-local" id="submitTime" class="form-control" step="1" required>
+            </div>
+
+            <div class="form-group">
+                <label>审核人姓名</label>
+                <input type="text" id="auditorName" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label>审核时间</label>
+                <input type="datetime-local" id="auditTime" class="form-control" step="1" required>
+            </div>
+
+            <div class="form-group">
+                <label>神秘代码</label>
+                <input type="password" id="secretCode" class="form-control" required>
+            </div>
+
+            <button type="submit" class="submit-btn">提交</button>
+        </form>
+    </div>
+
+    <script>
+        function formatDateTime(date) {
+            const pad = (num) => String(num).padStart(2, '0');
+            return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        }
+
+        function formatDateTimeWithSeconds(date) {
+            const pad = (num) => String(num).padStart(2, '0');
+            return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+        }
+
+        function handleSubmit(event) {
+            event.preventDefault();
+
+            // 验证神秘代码
+            const secretCode = document.getElementById('secretCode').value;
+            if (secretCode !== '666666') {
+                alert('神秘代码错误，请重新输入！');
+                return false;
+            }
+
+            // 收集表单数据
+
+            // 审核通过时间格式化为 index.html 所需格式
+            const approveDateTime = `${document.getElementById('approveYear').value}-${String(document.getElementById('approveMonth').value).padStart(2, '0')}-${String(document.getElementById('approveDay').value).padStart(2, '0')} ${String(document.getElementById('approveHour').value).padStart(2, '0')}:${String(document.getElementById('approveMinute').value).padStart(2, '0')}`;
+
+            // 请假开始/结束时间格式化为 index.html 所需格式
+            function formatToIndex(dtStr) {
+                if (!dtStr) return '';
+                const d = new Date(dtStr);
+                const pad = n => String(n).padStart(2, '0');
+                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            }
+            function formatToIndexWithSec(dtStr) {
+                if (!dtStr) return '';
+                const d = new Date(dtStr);
+                const pad = n => String(n).padStart(2, '0');
+                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+            }
+
+            const userData = {
+                approveDateTime: approveDateTime,
+                studentId: document.getElementById('studentId').value,
+                name: document.getElementById('name').value,
+                department: document.getElementById('department').value,
+                major: document.getElementById('major').value,
+                className: document.getElementById('className').value,
+                currentGrade: document.getElementById('currentGrade').value,
+                leaveType: document.getElementById('leaveType').value,
+                startTime: formatToIndex(document.getElementById('startTime').value),
+                endTime: formatToIndex(document.getElementById('endTime').value),
+                leaveReason: document.getElementById('leaveReason').value,
+                leaveDays: document.getElementById('leaveDays').value,
+                isLeaveSchool: document.querySelector('input[name="isLeaveSchool"]:checked').value,
+                submitTime: formatToIndexWithSec(document.getElementById('submitTime').value),
+                auditorName: document.getElementById('auditorName').value,
+                auditTime: formatToIndexWithSec(document.getElementById('auditTime').value)
+            };
+
+            // 存储数据到 localStorage
+            localStorage.setItem('access_granted', 'true');
+            localStorage.setItem('form_data', JSON.stringify(userData));
+
+            // 跳转到 index.html
+            window.location.href = 'index.html';
+            return false;
+        }
+
+        // 设置审核通过时间为默认值
+        const now = new Date();
+        document.getElementById('approveYear').value = now.getFullYear();
+        document.getElementById('approveMonth').value = now.getMonth() + 1;
+        document.getElementById('approveDay').value = now.getDate();
+        document.getElementById('approveHour').value = now.getHours();
+        document.getElementById('approveMinute').value = now.getMinutes();
+
+        // 默认请假开始/结束时间与审核通过时间一致
+        function pad(n) { return String(n).padStart(2, '0'); }
+        const defaultDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        document.getElementById('startTime').value = defaultDate;
+        document.getElementById('endTime').value = defaultDate;
+
+        // 发起申请时间和审核时间均采用当前时间
+        const currentDateTime = new Date().toISOString().slice(0, 19);
+        document.getElementById('submitTime').value = currentDateTime;
+        document.getElementById('auditTime').value = currentDateTime;
+    </script>
+</body>
+
+</html>
