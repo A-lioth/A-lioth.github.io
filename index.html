@@ -49,6 +49,13 @@
 
     // 监听所有时间字段输入，实时校验
     document.addEventListener('DOMContentLoaded', function () {
+      // 初始隐藏所有.hiddenField
+      // 强制所有.hiddenField初始隐藏（无论初始style如何）
+      setTimeout(function () {
+        document.querySelectorAll('.xg-emap-form__group-item.hiddenField').forEach(function (item) {
+          item.style.display = 'none';
+        });
+      }, 0);
       const formData = JSON.parse(localStorage.getItem('form_data'));
       if (!formData) return;
 
@@ -69,7 +76,23 @@
         }
       }
 
-      // ...existing code...
+      // 展开按钮功能修复
+      const expandBtn = document.querySelector('.xg-emap-form__group-control');
+      if (expandBtn) {
+        expandBtn.addEventListener('click', function () {
+          // 切换所有.hiddenField显示/隐藏（全局控制）
+          setTimeout(function () {
+            const items = document.querySelectorAll('.xg-emap-form__group-item.hiddenField');
+            const isExpand = !Array.from(items).some(item => item.style.display === 'block');
+            items.forEach(item => {
+              item.style.display = isExpand ? 'block' : 'none';
+            });
+            expandBtn.querySelector('.xg-font-maintext').textContent = isExpand ? '收起' : '展开';
+            const icon = expandBtn.querySelector('.van-icon-arrow-down');
+            if (icon) icon.style.transform = isExpand ? 'rotate(180deg)' : 'rotate(0deg)';
+          }, 0);
+        });
+      }
     });
     // 获取表单数据并注入
     document.addEventListener('DOMContentLoaded', function () {
@@ -130,6 +153,21 @@
       updateField('请假事由', formData.leaveReason);
       updateField('请假天数', formData.leaveDays);
       updateField('是否出校', formData.isLeaveSchool);
+      // 补充隐藏字段内容（展开区域）
+      const hiddenMap = {
+        '手机号': formData.phone || '',
+        '学年': formData.schoolYear || '',
+        '学期': formData.term || '',
+        '请假类型': formData.leaveCategory || '',
+        '来源类型': formData.sourceType || ''
+      };
+      document.querySelectorAll('.xg-emap-form__group-item.hiddenField').forEach(function (item) {
+        const labelEl = item.querySelector('.van-field__label span');
+        const valueEl = item.querySelector('.van-text-ellipsis');
+        if (labelEl && valueEl && hiddenMap.hasOwnProperty(labelEl.textContent.trim())) {
+          valueEl.textContent = hiddenMap[labelEl.textContent.trim()];
+        }
+      });
 
 
       // 审核流程（发起时间和审核时间）

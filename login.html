@@ -132,26 +132,22 @@
                 <input type="text" id="className" class="form-control" required style="margin-bottom:0;flex:1;">
             </div>
             <div class="form-group" style="display:flex;align-items:center;gap:12px;">
-
                 <label style="margin-bottom:0;min-width:110px;">现在年级</label>
                 <input type="text" id="currentGrade" class="form-control" required style="margin-bottom:0;flex:1;">
             </div>
 
             <div class="form-group" style="display:flex;align-items:center;gap:12px;">
-
                 <label style="margin-bottom:0;min-width:110px;">请假性质</label>
                 <input type="text" id="leaveType" class="form-control" required style="margin-bottom:0;flex:1;">
             </div>
 
             <div class="form-group" style="display:flex;align-items:center;gap:12px;">
-
                 <label style="margin-bottom:0;min-width:110px;">请假开始时间</label>
                 <input type="datetime-local" id="startTime" class="form-control" required
                     style="margin-bottom:0;flex:1;">
             </div>
 
             <div class="form-group" style="display:flex;align-items:center;gap:12px;">
-
                 <label style="margin-bottom:0;min-width:110px;">请假结束时间</label>
                 <input type="datetime-local" id="endTime" class="form-control" required style="margin-bottom:0;flex:1;">
             </div>
@@ -159,7 +155,7 @@
             <div class="form-group" style="display:flex;align-items:center;gap:12px;">
                 <label style="margin-bottom:0;min-width:110px;">请假事由</label>
                 <input type="text" id="leaveReason" class="form-control" required style="margin-bottom:0;flex:1;"
-                    required></>
+                    required>
             </div>
 
             <div class="form-group" style="display:flex;align-items:center;gap:12px;">
@@ -192,6 +188,27 @@
                 <input type="datetime-local" id="auditTime" class="form-control" required
                     style="margin-bottom:0;flex:1;">
             </div>
+            <!-- 新添加字段（非必填，无星号） -->
+            <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+                <label style="margin-bottom:0;min-width:110px;font-weight:normal;color:#2e8cf0;">手机号</label>
+                <input type="text" id="phone" class="form-control" style="margin-bottom:0;flex:1;">
+            </div>
+            <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+                <label style="margin-bottom:0;min-width:110px;font-weight:normal;color:#2e8cf0;">学年</label>
+                <input type="text" id="schoolYear" class="form-control" style="margin-bottom:0;flex:1;">
+            </div>
+            <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+                <label style="margin-bottom:0;min-width:110px;font-weight:normal;color:#2e8cf0;">学期</label>
+                <input type="text" id="term" class="form-control" style="margin-bottom:0;flex:1;">
+            </div>
+            <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+                <label style="margin-bottom:0;min-width:110px;font-weight:normal;color:#2e8cf0;">请假类型</label>
+                <input type="text" id="leaveCategory" class="form-control" style="margin-bottom:0;flex:1;">
+            </div>
+            <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+                <label style="margin-bottom:0;min-width:110px;font-weight:normal;color:#2e8cf0;">来源类型</label>
+                <input type="text" id="sourceType" class="form-control" style="margin-bottom:0;flex:1;">
+            </div>
 
             <div class="form-group" style="display:flex;align-items:center;gap:12px;">
                 <label style="margin-bottom:0;min-width:110px;">神秘代码</label>
@@ -203,6 +220,7 @@
     </div>
 
 
+    </div>
 
     <script>
         // 时间输入后校验格式
@@ -246,6 +264,7 @@
                 return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
             }
 
+
             const userData = {
                 approveDateTime: formatToIndex(document.getElementById('approveDateTime').value),
                 studentId: document.getElementById('studentId').value,
@@ -262,7 +281,12 @@
                 isLeaveSchool: document.querySelector('input[name="isLeaveSchool"]:checked').value,
                 submitTime: formatToIndexWithSec(document.getElementById('submitTime').value),
                 auditorName: document.getElementById('auditorName').value,
-                auditTime: formatToIndexWithSec(document.getElementById('auditTime').value)
+                auditTime: formatToIndexWithSec(document.getElementById('auditTime').value),
+                phone: document.getElementById('phone').value,
+                schoolYear: document.getElementById('schoolYear').value,
+                term: document.getElementById('term').value,
+                leaveCategory: document.getElementById('leaveCategory').value,
+                sourceType: document.getElementById('sourceType').value,
             };
 
             // 存储数据到 localStorage
@@ -270,10 +294,7 @@
             localStorage.setItem('form_data', JSON.stringify(userData));
 
             // 跳转到 index.html（仅在未弹出遮罩时执行跳转）
-            if (!document.getElementById('mask-tip')) {
-                window.location.replace('index.html');
-            }
-            return false;
+            window.location.replace('index.html');
         }
 
         // 遮罩提示（不暴露网址）
@@ -293,19 +314,41 @@
 
         // 设置所有时间字段默认值为当前时间（修复发起时间默认值格式问题）
         function pad(n) { return String(n).padStart(2, '0'); }
-        function getDateTimeLocalString(withSec = false) {
+        function getDateTimeLocalString() {
             const now = new Date();
             const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
             const time = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-            const sec = pad(now.getSeconds());
-            // input[type=datetime-local] 需要 "YYYY-MM-DDTHH:mm" 或 "YYYY-MM-DDTHH:mm:ss"
-            return withSec ? `${date}T${time}:${sec}` : `${date}T${time}`;
+            return `${date}T${time}`;
         }
-        document.getElementById('approveDateTime').value = getDateTimeLocalString(false);
-        document.getElementById('startTime').value = getDateTimeLocalString(false);
-        document.getElementById('endTime').value = getDateTimeLocalString(false);
-        document.getElementById('submitTime').value = getDateTimeLocalString(false);
-        document.getElementById('auditTime').value = getDateTimeLocalString(false);
+        function setDefaultDateTimes() {
+            const ids = ['approveDateTime', 'startTime', 'endTime', 'submitTime', 'auditTime'];
+            ids.forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el && !el.value) el.value = getDateTimeLocalString();
+            });
+            calcLeaveDays();
+        }
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            setTimeout(setDefaultDateTimes, 0);
+        } else {
+            window.addEventListener('DOMContentLoaded', setDefaultDateTimes);
+        }
+        // 请假天数自动计算
+        function calcLeaveDays() {
+            const start = document.getElementById('startTime').value;
+            const end = document.getElementById('endTime').value;
+            if (start && end) {
+                const startDate = new Date(start);
+                const endDate = new Date(end);
+                let days = (endDate - startDate) / (1000 * 60 * 60 * 24);
+                if (days < 0) days = 0;
+                document.getElementById('leaveDays').value = days.toFixed(2);
+            }
+        }
+        document.getElementById('startTime').addEventListener('change', calcLeaveDays);
+        document.getElementById('endTime').addEventListener('change', calcLeaveDays);
+        // 初始化时也计算一次
+        calcLeaveDays();
     </script>
 </body>
 
